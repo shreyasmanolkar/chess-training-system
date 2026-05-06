@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>♚ Grandmaster Blueprint — Elite Chess Training System</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Crimson+Pro:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+  (() => {
+    const STORAGE_KEY = 'gmb-theme';
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+      const theme = saved === 'light' || saved === 'dark' ? saved : (prefersLight ? 'light' : 'dark');
+      if (theme === 'light') document.documentElement.dataset.theme = 'light';
+    } catch (_) {
+      // If storage access is blocked, fall back to CSS default (dark).
+    }
+  })();
+</script>
+<style>
+  :root {
+    --bg: #06060b;
+    --bg-raised: #0c0c14;
+    --card: #10101a;
+    --card-hover: #141422;
+    --surface: #1a1a2e;
+    --border: #1c1c30;
+    --border-accent: #c8a82833;
+    --text: #e6e4df;
+    --text-dim: #7a7a8e;
+    --text-muted: #4e4e62;
+    --gold: #c9a227;
+    --gold-dim: #a08520;
+    --gold-bg: #c9a22710;
+    --gold-bg-strong: #c9a22720;
+    --success: #3dd68c;
+    --warning: #f0b429;
+    --danger: #ef6461;
+    --info: #5b9bd5;
+    --stripe: #0a0a12;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.4);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+    --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* === NOISE TEXTURE OVERLAY === */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* === HEADER === */
+  .header {
+    position: relative;
+    padding: 36px 28px 28px;
+    border-bottom: 2px solid var(--gold);
+    background: linear-gradient(175deg, #0f0f1a 0%, var(--bg) 100%);
+    overflow: hidden;
+  }
+
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  .header-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    opacity: 0;
+    animation: fadeSlideUp 0.6s ease forwards;
+  }
+
+  .header h1 {
+    font-family: 'Crimson Pro', serif;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+    opacity: 0;
+    animation: fadeSlideUp 0.6s ease 0.1s forwards;
+  }
+
+  .header p {
+    color: var(--text-dim);
+    font-size: 14px;
+    opacity: 0;
+    animation: fadeSlideUp 0.6s ease 0.2s forwards;
+  }
+
+  .chess-icon {
+    position: absolute;
+    right: 28px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 64px;
+    opacity: 0.06;
+    line-height: 1;
+  }
+
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* === NAVIGATION === */
+  .nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-raised);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+  }
+
+  .nav-btn {
+    padding: 7px 14px;
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: 'JetBrains Mono', monospace;
+    transition: all var(--transition);
+    white-space: nowrap;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .nav-btn:hover {
+    color: var(--text);
+    border-color: var(--gold-dim);
+    background: var(--gold-bg);
+  }
+
+  .nav-btn.active {
+    background: var(--gold);
+    color: #0a0a0f;
+    border-color: var(--gold);
+    font-weight: 700;
+    box-shadow: 0 0 16px #c9a22730;
+  }
+
+  /* === MAIN CONTENT === */
+  .content {
+    padding: 28px 22px;
+    max-width: 920px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  .section { display: none; animation: sectionIn 0.3s ease; }
+  .section.active { display: block; }
+
+  @keyframes sectionIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  h2 {
+    font-family: 'Crimson Pro', serif;
+    font-size: 24px;
+    font-weight: 800;
+    margin-bottom: 16px;
+    letter-spacing: -0.3px;
+  }
+
+  h3 {
+    font-family: 'Crimson Pro', serif;
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--gold);
+    margin: 28px 0 14px;
+  }
+
+  p { margin-bottom: 12px; font-size: 14.5px; }
+
+  strong { color: #f0ede8; }
+
+  code {
+    background: var(--gold-bg-strong);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--gold);
+  }
+
+  /* === COLLAPSIBLE PANELS === */
+  .collapse {
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: border-color var(--transition);
+  }
+
+  .collapse:hover { border-color: var(--border-accent); }
+
+  .collapse-trigger {
+    width: 100%;
+    padding: 15px 20px;
+    background: var(--card);
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background var(--transition);
+  }
+
+  .collapse-trigger:hover { background: var(--card-hover); }
+
+  .collapse.open .collapse-trigger { background: var(--gold-bg-strong); }
+
+  .collapse-arrow {
+    font-size: 18px;
+    transition: transform 0.25s ease;
+    color: var(--text-dim);
+    flex-shrink: 0;
+    margin-left: 12px;
+  }
+
+  .collapse.open .collapse-arrow { transform: rotate(90deg); color: var(--gold); }
+
+  .collapse-body {
+    display: none;
+    padding: 18px 20px;
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    font-size: 14.5px;
+    line-height: 1.75;
+  }
+
+  .collapse.open .collapse-body { display: block; }
+
+  /* === TABLES === */
+  .table-wrap { overflow-x: auto; margin-bottom: 18px; border-radius: var(--radius-sm); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  thead th {
+    padding: 11px 14px;
+    background: var(--surface);
+    text-align: left;
+    border-bottom: 2px solid var(--gold-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--gold);
+    white-space: nowrap;
+  }
+
+  tbody td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    line-height: 1.6;
+  }
+
+  tbody tr:nth-child(even) { background: var(--stripe); }
+  tbody tr:hover { background: var(--gold-bg); }
+
+  /* === TAGS === */
+  .tag {
+    display: inline-block;
+    padding: 3px 11px;
+    border-radius: 4px;
+    font-size: 11.5px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    margin-right: 6px;
+    margin-bottom: 6px;
+    letter-spacing: 0.3px;
+  }
+
+  .tag-gold { background: #c9a22722; color: var(--gold); }
+  .tag-green { background: #3dd68c22; color: var(--success); }
+  .tag-red { background: #ef646122; color: var(--danger); }
+  .tag-blue { background: #5b9bd522; color: var(--info); }
+  .tag-yellow { background: #f0b42922; color: var(--warning); }
+
+  /* === ALERT BOX === */
+  .alert {
+    border-radius: var(--radius);
+    padding: 22px;
+    margin-bottom: 22px;
+  }
+
+  .alert-danger {
+    background: #ef646110;
+    border: 2px solid var(--danger);
+  }
+
+  .alert-danger .alert-title {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--danger);
+    margin-bottom: 12px;
+    font-family: 'Crimson Pro', serif;
+  }
+
+  /* === FOOTER === */
+  .footer {
+    padding: 24px 28px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 12.5px;
+    font-family: 'JetBrains Mono', monospace;
+    font-style: italic;
+  }
+
+  /* === RESPONSIVE === */
+  @media (max-width: 640px) {
+    .header { padding: 24px 18px 20px; }
+    .header h1 { font-size: 22px; }
+    .chess-icon { display: none; }
+    .nav { padding: 10px 12px; gap: 4px; }
+    .nav-btn { padding: 6px 10px; font-size: 11px; }
+    .content { padding: 20px 14px; }
+    .collapse-trigger { padding: 12px 14px; font-size: 13.5px; }
+    .collapse-body { padding: 14px; }
+    thead th, tbody td { padding: 8px 10px; font-size: 12px; }
+    h2 { font-size: 20px; }
+  }
+
+  /* === SCROLL INDICATOR === */
+  .nav::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 40px;
+    background: linear-gradient(90deg, transparent, var(--bg-raised));
+    pointer-events: none;
+    opacity: 0.7;
+  }
+
+  /* === LIGHT THEME === */
+  [data-theme="light"] {
+    --bg: #f4f1eb;
+    --bg-raised: #ece8e0;
+    --card: #ffffff;
+    --card-hover: #f9f7f3;
+    --surface: #e8e4dc;
+    --border: #d4cfc5;
+    --border-accent: #a0851f44;
+    --text: #1a1814;
+    --text-dim: #6b6560;
+    --text-muted: #9a9590;
+    --gold: #8b6f14;
+    --gold-dim: #74600f;
+    --gold-bg: #8b6f1410;
+    --gold-bg-strong: #8b6f141a;
+    --success: #1a8f52;
+    --warning: #a67b10;
+    --danger: #c43a38;
+    --info: #2e6ea6;
+    --stripe: #f0ece4;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.1);
+  }
+
+  [data-theme="light"] body::before { opacity: 0.015; }
+
+  [data-theme="light"] .header {
+    background: linear-gradient(175deg, #e8e4dc 0%, var(--bg) 100%);
+  }
+
+  [data-theme="light"] .chess-icon { opacity: 0.05; }
+
+  [data-theme="light"] .nav::after {
+    background: linear-gradient(90deg, transparent, var(--bg-raised));
+  }
+
+  [data-theme="light"] .nav-btn.active {
+    box-shadow: 0 0 12px #8b6f1425;
+  }
+
+  [data-theme="light"] strong { color: #0f0d0a; }
+
+  [data-theme="light"] code {
+    background: #8b6f1418;
+    color: #6b5510;
+  }
+
+  [data-theme="light"] .tag-gold { background: #8b6f1418; color: var(--gold); }
+  [data-theme="light"] .tag-green { background: #1a8f5218; color: var(--success); }
+  [data-theme="light"] .tag-red { background: #c43a3818; color: var(--danger); }
+  [data-theme="light"] .tag-blue { background: #2e6ea618; color: var(--info); }
+  [data-theme="light"] .tag-yellow { background: #a67b1018; color: var(--warning); }
+
+  [data-theme="light"] .alert-danger {
+    background: #c43a3808;
+    border-color: var(--danger);
+  }
+
+  [data-theme="light"] tbody tr:hover { background: #8b6f140a; }
+
+  /* === THEME TRANSITION === */
+  html.theme-transitioning,
+  html.theme-transitioning *,
+  html.theme-transitioning *::before,
+  html.theme-transitioning *::after {
+    transition: background-color 0.4s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
+  }
+
+  /* === THEME TOGGLE === */
+  .theme-toggle {
+    position: absolute;
+    right: 28px;
+    top: 28px;
+    width: 52px;
+    height: 28px;
+    border-radius: 14px;
+    border: 2px solid var(--border);
+    background: var(--surface);
+    cursor: pointer;
+    padding: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    transition: background 0.3s ease, border-color 0.3s ease;
+  }
+
+  .theme-toggle:hover {
+    border-color: var(--gold);
+  }
+
+  .theme-toggle-track {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  .theme-toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    line-height: 1;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+
+  [data-theme="light"] .theme-toggle-thumb {
+    transform: translateX(24px);
+  }
+
+  .theme-toggle-label {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    pointer-events: none;
+    color: var(--text-muted);
+    transition: opacity 0.2s ease;
+  }
+
+  .theme-toggle-label.label-light {
+    right: 7px;
+    opacity: 1;
+  }
+
+  .theme-toggle-label.label-dark {
+    left: 7px;
+    opacity: 0;
+  }
+
+  [data-theme="light"] .theme-toggle-label.label-light { opacity: 0; }
+  [data-theme="light"] .theme-toggle-label.label-dark { opacity: 1; }
+
+  @media (max-width: 640px) {
+    .theme-toggle { right: 14px; top: 18px; width: 46px; height: 26px; }
+    .theme-toggle-thumb { width: 18px; height: 18px; font-size: 11px; }
+    [data-theme="light"] .theme-toggle-thumb { transform: translateX(20px); }
+  }
+
+  /* === PRIORITY DOTS === */
+  .priority-critical { color: var(--danger); }
+  .priority-important { color: var(--warning); }
+  .priority-good { color: var(--success); }
+</style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<div class="header">
+  <div class="header-label">Elite Chess Training System</div>
+  <h1>♚ Grandmaster Blueprint</h1>
+  <p>From 1000 Elo to Maximum Potential — A 3-Year Structured Program</p>
+  <div class="chess-icon">♛</div>
+  <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle light/dark theme" title="Toggle theme">
+    <span class="theme-toggle-track">
+      <span class="theme-toggle-thumb" id="themeToggleThumb" aria-hidden="true">☾</span>
+      <span class="theme-toggle-label label-dark" aria-hidden="true"></span>
+      <span class="theme-toggle-label label-light" aria-hidden="true"></span>
+    </span>
+  </button>
+</div>
+
+<!-- ===== NAVIGATION ===== -->
+<div class="nav" id="nav">
+  <button class="nav-btn active" data-section="reality">⚡ Reality</button>
+  <button class="nav-btn" data-section="blueprint">📅 Blueprint</button>
+  <button class="nav-btn" data-section="openings">♟️ Openings</button>
+  <button class="nav-btn" data-section="attacks">⚔️ Attacks</button>
+  <button class="nav-btn" data-section="defense">🛡️ Defense</button>
+  <button class="nav-btn" data-section="patterns">🎯 Patterns</button>
+  <button class="nav-btn" data-section="memory">🧠 Memory</button>
+  <button class="nav-btn" data-section="masters">👑 Masters</button>
+  <button class="nav-btn" data-section="middlegame">♜ Middlegame</button>
+  <button class="nav-btn" data-section="endgame">♚ Endgame</button>
+  <button class="nav-btn" data-section="schedule">📋 Schedule</button>
+  <button class="nav-btn" data-section="calculation">🔢 Calculation</button>
+  <button class="nav-btn" data-section="tournament">🏆 Tournament</button>
+  <button class="nav-btn" data-section="resources">📚 Resources</button>
+</div>
+
+<!-- ===== CONTENT ===== -->
+<div class="content">
+
+<!-- ==================== SECTION: REALITY CHECK ==================== -->
+<div class="section active" id="section-reality">
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Timeline</th><th>Realistic Target</th><th>Hours Required</th><th>Odds</th></tr></thead>
+      <tbody>
+        <tr><td>2 years</td><td>1600–1900 Elo</td><td>2,000–3,000 hrs</td><td>Achievable with discipline</td></tr>
+        <tr><td>5 years</td><td>1900–2200 (FM candidate)</td><td>5,000–8,000 hrs</td><td>Possible for talented adults</td></tr>
+        <tr><td>8–10 years</td><td>2200–2400 (FM/IM)</td><td>10,000–15,000 hrs</td><td>Rare but documented</td></tr>
+        <tr><td>12–15+ years</td><td>2500+ (GM)</td><td>15,000–20,000+ hrs</td><td>Extremely rare for adult starters</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="collapse open">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">What Actually Separates Each Level <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Rating</th><th>Title</th><th>Pattern Library</th><th>Calc Depth</th><th>Endgame Knowledge</th></tr></thead>
+          <tbody>
+            <tr><td>1000–1200</td><td>Beginner</td><td>~100 patterns</td><td>1–2 moves</td><td>Minimal</td></tr>
+            <tr><td>1400–1600</td><td>Club Player</td><td>~500 patterns</td><td>2–3 moves</td><td>Basic K+P, Rook basics</td></tr>
+            <tr><td>1800–2000</td><td>Strong Club</td><td>~2,000 patterns</td><td>3–5 moves</td><td>All fundamentals solid</td></tr>
+            <tr><td>2000–2200</td><td>Expert/CM</td><td>~5,000 patterns</td><td>5–7 moves</td><td>Deep practical knowledge</td></tr>
+            <tr><td>2200–2400</td><td>FM/IM</td><td>~10,000 patterns</td><td>7–10 moves</td><td>Near-complete mastery</td></tr>
+            <tr><td>2400–2500+</td><td>GM</td><td>~50,000+ patterns</td><td>10–15+ moves</td><td>Complete mastery</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">The Maximum-Achievement Roadmap <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p><strong>This training plan is designed to push you as far as humanly possible.</strong> If you follow it with full discipline, 4–6 hours daily, the realistic maximum outcome in 2 years is approximately 1800–2100 Elo — which is a massive, life-changing improvement. You would go from a beginner to a strong club/tournament player who beats 90%+ of all chess players.</p>
+      <p>The plan below is structured as if GM is the target, because the methods used by GM-track players ARE the optimal methods at every level. You will learn GM-quality thinking habits from day one. The difference is only in depth and volume.</p>
+      <p style="font-weight:700;color:var(--gold)">Commit to the process. The rating will follow.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SECTION: BLUEPRINT ==================== -->
+<div class="section" id="section-blueprint">
+  <h2>📅 2-Year Grandmaster-Track Training Blueprint</h2>
+
+  <div class="collapse open">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">PHASE 1: Foundation (Months 1–3) → Target: 1300–1400 <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <span class="tag tag-gold">TACTICS</span><span class="tag tag-gold">BASICS</span><span class="tag tag-gold">HABITS</span>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Month</th><th>Focus Areas</th><th>Hours/Day</th><th>Benchmark</th></tr></thead>
+          <tbody>
+            <tr><td>Month 1</td><td>Basic tactics (forks, pins, skewers), piece values, checkmate patterns, 1-move threats, basic opening principles (not specific lines)</td><td>2–3 hrs</td><td>Solve 85%+ of Lichess 1000-rated puzzles in &lt;60s each</td></tr>
+            <tr><td>Month 2</td><td>2-move tactical combos, basic endgames (K+Q vs K, K+R vs K, opposition), play 15-min rapid with analysis</td><td>3–4 hrs</td><td>Rating 1200+, can explain every move in your games</td></tr>
+            <tr><td>Month 3</td><td>Discovered attacks, removing the guard, basic pawn structures, intro to 2 openings (1 as White, 1 as Black)</td><td>3–4 hrs</td><td>Rating 1300+, 90%+ on 2-move puzzles, zero hanging pieces</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>Milestone Test:</strong> Play 5 rated games. You must not hang a single piece in any of them. You must be able to name every tactical motif that appears.</p>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">PHASE 2: Pattern Building (Months 4–6) → Target: 1450–1550 <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <span class="tag tag-blue">OPENINGS</span><span class="tag tag-blue">CALCULATION</span><span class="tag tag-blue">ENDGAMES</span>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Month</th><th>Focus Areas</th><th>Hours/Day</th><th>Benchmark</th></tr></thead>
+          <tbody>
+            <tr><td>Month 4</td><td>3-move tactics, opening repertoire build (e4 as White, Sicilian + 1...e5 as Black), rook endgame basics (Lucena/Philidor)</td><td>4 hrs</td><td>Consistent 1400+, can play 10 moves of theory in main openings</td></tr>
+            <tr><td>Month 5</td><td>Positional concepts: weak squares, open files, piece activity. Study 2 master games/week. Start classical games (30+0)</td><td>4 hrs</td><td>Can identify 3 positional features in any position</td></tr>
+            <tr><td>Month 6</td><td>Combination training (4-move), start learning pawn structures deeply (IQP, Carlsbad, Hedgehog), intermediate endgames</td><td>4–5 hrs</td><td>Rating 1500+, solving 1400-rated puzzles at 80%+</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>Milestone Test:</strong> Annotate one of your own games completely without an engine first. Then check. Accuracy of your annotations should be 60%+.</p>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">PHASE 3: Intermediate Mastery (Months 7–12) → Target: 1650–1800 <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <span class="tag tag-green">STRATEGY</span><span class="tag tag-green">DEEP OPENINGS</span><span class="tag tag-green">TOURNAMENT PREP</span>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Quarter Goal</th><th>Focus Areas</th><th>Hours/Day</th><th>Key Benchmarks</th></tr></thead>
+          <tbody>
+            <tr><td>Months 7–9: 1600+</td><td>Full opening repertoire for both colors, attacking patterns (Greek Gift, back-rank), prophylaxis, study 3 master games/week, play 1 tournament</td><td>4–5 hrs</td><td>Can play 15+ moves of theory, spot sacrificial opportunities, 70%+ accuracy in self-annotation</td></tr>
+            <tr><td>Months 10–12: 1750+</td><td>Opposite-side castling attacks, minority attacks, pawn storms, complex endgames, serious tournament play monthly, calculation depth to 5 moves</td><td>5–6 hrs</td><td>Beat 1600-rated opponents consistently, 1600+ puzzle rating, can reconstruct 5 master games from memory</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">PHASE 4: Advanced Play (Months 13–18) → Target: 1900–2050 <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <span class="tag tag-yellow">DEEP STRATEGY</span><span class="tag tag-yellow">CALCULATION</span><span class="tag tag-yellow">COMPETITION</span>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Quarter Goal</th><th>Focus Areas</th><th>Hours/Day</th><th>Key Benchmarks</th></tr></thead>
+          <tbody>
+            <tr><td>Months 13–15: 1900+</td><td>Exchange sacrifices, positional squeezes, dynamic vs static advantages, advanced pawn structures, candidate move discipline, analyze GM games at board level</td><td>5–6 hrs</td><td>Can calculate 6–7 move variations accurately, handle time pressure in 90+30 games</td></tr>
+            <tr><td>Months 16–18: 2000+</td><td>Complete endgame mastery, deep opening preparation (12+ moves with plans), psychological resilience training, play in FIDE-rated events</td><td>5–6 hrs</td><td>FIDE rating established, can hold draws against 2000+ players, occasional wins against 2100+</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">PHASE 5: Expert Push (Months 19–24) → Target: 2050–2200 <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <span class="tag tag-red">MASTERY</span><span class="tag tag-red">COMPETITION</span><span class="tag tag-red">SPECIALIZATION</span>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Period</th><th>Focus Areas</th><th>Hours/Day</th><th>Key Benchmarks</th></tr></thead>
+          <tbody>
+            <tr><td>Months 19–21</td><td>Opening novelties and deep prep, complex middlegame maneuvering, practical endgame technique, play 2 serious tournaments/month, work with engine analysis at depth 30+</td><td>5–6 hrs</td><td>Consistent 2050+, earning FIDE rating points, can prep against specific opponents</td></tr>
+            <tr><td>Months 22–24</td><td>Full repertoire refinement, weakness elimination, mental/physical peak performance, tournament-focused training, target FM-norm events</td><td>6 hrs</td><td>Target: 2100–2200, competitive in open tournaments, path to FM visible</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SECTION: OPENINGS ==================== -->
+<div class="section" id="section-openings">
+  <h2>♟️ Complete Opening Repertoire</h2>
+  <p><strong>Recommended Repertoire Build Order:</strong> Start with 2 openings (Month 3), expand to 4 (Month 6), full repertoire by Month 12. Don't try to learn everything at once.</p>
+
+  <h3>1.e4 Systems</h3>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">Ruy Lopez (1.e4 e5 2.Nf3 Nc6 3.Bb5) <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p><strong>Core Ideas:</strong> White develops rapidly, pressures e5 pawn indirectly through Nc6, aims for long-term central control. The bishop on b5 doesn't capture immediately — it maintains tension.</p>
+      <p><strong>Main Line:</strong> <code>3...a6 4.Ba4 Nf6 5.O-O Be7 6.Re1 b5 7.Bb3 d6 8.c3 O-O</code> (Closed Ruy Lopez — the main battleground of chess history)</p>
+      <p><strong>Tactical Traps:</strong> Noah's Ark Trap: ...a6, ...b5, ...Na5 wins the bishop if White is careless. Mortimer Trap in the Berlin: 3...Nf6 (Berlin) — beware endgame subtleties.</p>
+      <p><strong>Middlegame Plans:</strong> d4 break to open center, Nbd2-f1-g3 maneuver, kingside pressure with f4 in some lines. Black aims for ...d5 break or ...f5 counterplay.</p>
+      <p><strong>Pawn Structures:</strong> Closed center (e4 vs e5, d3 vs d6). If d4 exd4 cxd4: hanging pawns or IQP positions. Ruy Lopez pawn structures are among the most important to learn.</p>
+      <p><strong>Endgame Transitions:</strong> Rook endgames are extremely common. The slight space advantage often converts in long endgames.</p>
+      <p><strong>Memory Method:</strong> Learn the first 5 moves as a "story" — each move answers "what is the opponent threatening?" Chain cause-and-effect. Use Chessable's spaced repetition for drilling lines daily.</p>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">Italian Game (1.e4 e5 2.Nf3 Nc6 3.Bc4) <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p><strong>Core Ideas:</strong> Targets f7 immediately. More direct than Ruy Lopez. Modern Giuoco Piano (3...Bc5 4.c3 Nf6 5.d4) creates sharp central tension.</p>
+      <p><strong>Main Line:</strong> <code>3...Bc5 4.c3 Nf6 5.d4 exd4 6.cxd4 Bb4+ 7.Bd2</code> (or 7.Nbd2)</p>
+      <p><strong>Tactical Traps:</strong> Fried Liver Attack: 3...Nf6 4.Ng5 d5 5.exd5 Nxd5?? 6.Nxf7! Legal's Mate patterns. Blackburne Shilling Gambit refutation.</p>
+      <p><strong>Middlegame Plans:</strong> Central control with d4, develop pieces aggressively. In the Giuoco Pianissimo (4.d3), play is slower with a3, Ba2, Nbd2 setup.</p>
+      <p><strong>Pawn Structures:</strong> Open center after d4 exd4. Isolated d-pawn positions possible. Central pawn majority for White.</p>
+      <p><strong>Endgame Transitions:</strong> Bishop pair advantage common for White. Open positions favor active pieces.</p>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">Sicilian Defense (1.e4 c5) <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p><strong>Core Ideas:</strong> Black's most ambitious response to 1.e4. Creates asymmetrical pawn structure — Black gets a semi-open c-file and queenside majority; White gets central space and kingside attacking chances.</p>
+      <p><strong>Main Lines:</strong> <code>Najdorf: 2.Nf3 d6 3.d4 cxd4 4.Nxd4 Nf6 5.Nc3 a6</code> — the king of openings. Dragon: ...g6, ...Bg7 with fianchetto. Scheveningen: ...e6, ...d6 flexible setup.</p>
+      <p><strong>Tactical Traps:</strong> Siberian Trap in Rossolimo. Smith-Morra Gambit tricks (2.d4 cxd4 3.c3). Poisoned Pawn variation traps in Najdorf.</p>
+      <p><strong>Middlegame Plans:</strong> Open Sicilian: White plays f3-Be3-Qd2-O-O-O and storms kingside with g4-h4. Black counters on queenside with ...a5-a4, ...b5-b4. Opposite-side castling creates mutual attacks.</p>
+      <p><strong>Pawn Structures:</strong> Asymmetric: White e4 vs Black d6. Maroczy Bind (c4+e4) is a key structure. Half-open c-file for Black is critical.</p>
+      <p><strong>Endgame Transitions:</strong> Black's queenside pawn majority often decides endgames. Extra central pawn can be decisive.</p>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">French Defense (1.e4 e6) <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p><strong>Core Ideas:</strong> Solid but slightly passive. Black locks the center with ...d5 and plays for ...c5 break. The light-squared bishop on c8 is the French's eternal problem.</p>
+      <p><strong>Main Line:</strong> <code>2.d4 d5 3.Nc3 (or 3.Nd2) 3...Nf6 4.e5 Nfd7</code> (Advance) or <code>3...dxe4 4.Nxe4</code> (Exchange/Rubinstein)</p>
+      <p><strong>Tactical Traps:</strong> Milner-Barry Gambit in Advance. Winawer Poisoned Pawn. Exchange variation traps for unprepared players.</p>
+      <p><strong>Middlegame Plans:</strong> Black: ...c5, ...Nc6, ...Qb6 hitting d4 and b2. Undermine White's center. White: f4 to support e5, kingside space, attack along f-file.</p>
+      <p><strong>Pawn Structures:</strong> Advance chain (e5-d4 vs e6-d5) is THE key structure. Learn chain attacks: base of the chain (d4) is the target.</p>
+      <p><strong>Endgame Transitions:</strong> If Black solves the bad bishop problem, endgames are fine. Exchange bishops when possible.</p>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">Caro-Kann (1.e4 c6) <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p><strong>Core Ideas:</strong> Solid like French but solves the bishop problem — after ...d5 and ...Bf5 or ...Bg4, the light bishop is active. Less dynamic but very reliable.</p>
+      <p><strong>Main Line:</strong> <code>2.d4 d5 3.Nc3 dxe4 4.Nxe4 Bf5</code> (Classical) or <code>4...Nf6 5.Nxf6+ exf6</code> (Bronstein-Larsen)</p>
+      <p><strong>Tactical Traps:</strong> Tal's 5.Ng3 traps in Classical. Fantasy Variation tricks. Two Knights traps.</p>
+      <p><strong>Middlegame Plans:</strong> Black: Develop solidly, trade pieces, reach slightly worse but very holdable middlegames/endgames. White: Use space advantage, play for kingside initiative.</p>
+      <p><strong>Pawn Structures:</strong> Often symmetric or near-symmetric after exchanges. Carlsbad structure in Exchange variation.</p>
+      <p><strong>Endgame Transitions:</strong> Caro-Kann is an endgame-oriented opening. Black is often slightly worse but drawing chances are high.</p>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">Scandinavian (1.e4 d5) <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p><strong>Core Ideas:</strong> Immediately challenges e4. After 2.exd5 Qxd5 3.Nc3, the queen must move (usually ...Qa5 or ...Qd6). Simple development plan but slight tempo loss.</p>
+      <p><strong>Main Line:</strong> <code>2.exd5 Qxd5 3.Nc3 Qa5 4.d4 Nf6 5.Nf3 Bf5</code> — straightforward development</p>
+      <p><strong>Traps:</strong> Icelandic Gambit (2...Nf6). Portuguese Gambit. Various early queen traps for unwary opponents.</p>
+      <p><strong>Middlegame Plans:</strong> Black: Rapid development, solid pawn structure, simple piece play. White: Exploit tempo advantage, control center with d4+c4.</p>
+      <p><strong>Pawn Structures:</strong> Generally healthy for Black after ...c6 and ...e6. No structural weaknesses but less space.</p>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">Pirc / Alekhine <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p><strong>Core Ideas:</strong> Hypermodern: let White build a big center, then attack it. Pirc: 1...d6 2...Nf6 3...g6. Alekhine: 1...Nf6 provoking e5, then ...d6 undermining.</p>
+      <p><strong>Main Lines:</strong> Pirc: <code>1.e4 d6 2.d4 Nf6 3.Nc3 g6</code> — Austrian Attack (4.f4) is critical. Alekhine: <code>1.e4 Nf6 2.e5 Nd5 3.d4 d6 4.Nf3</code></p>
+      <p><strong>Traps:</strong> Austrian Attack sacrifices. 150 Attack in Pirc. Alekhine Exchange traps.</p>
+      <p><strong>Plans:</strong> Counterattack White's center with ...c5 or ...e5. Piece pressure before direct pawn breaks.</p>
+    </div>
+  </div>
+
+  <h3>1.d4 Systems</h3>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">Queen's Gambit (1.d4 d5 2.c4) <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p><strong>Core Ideas:</strong> White offers a pawn to deflect Black's d5 pawn and gain central control. Not a real gambit — Black can't hold the pawn. Accepted (2...dxc4) and Declined (2...e6) are both fully sound.</p>
+      <p><strong>Main Line:</strong> QGD: <code>2...e6 3.Nc3 Nf6 4.Bg5 Be7 5.e3 O-O 6.Nf3</code> — classical setup. QGA: <code>2...dxc4 3.Nf3 Nf6 4.e3 e6 5.Bxc4</code></p>
+      <p><strong>Plans:</strong> White: Minority attack (a4-b5) in Carlsbad structure, central e4 break, piece pressure. Black (QGD): ...c5 or ...e5 breaks, free the bad bishop.</p>
+      <p><strong>Pawn Structures:</strong> Carlsbad (cxd5 exd5): one of the most important structures. IQP after ...dxc4 and e4. Symmetric after exchange.</p>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">Slav &amp; Semi-Slav (2...c6) <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p><strong>Core Ideas:</strong> Slav: 2...c6 supports d5 while keeping the light bishop mobile (unlike the QGD where ...e6 traps it). Semi-Slav: 2...c6 followed by ...e6 — extremely rich and complex.</p>
+      <p><strong>Main Line:</strong> Slav: <code>3.Nf3 Nf6 4.Nc3 dxc4 5.a4 Bf5</code>. Semi-Slav Meran: ...dxc4, ...b5, ...Bb7 with queenside expansion.</p>
+      <p><strong>Plans:</strong> Slav: Solid, develop Bc8 before playing ...e6. Semi-Slav: Sharp counterplay with ...b5 and central breaks. Botvinnik variation is razor-sharp theory.</p>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">King's Indian Defense (1.d4 Nf6 2.c4 g6 3.Nc3 Bg7) <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p><strong>Core Ideas:</strong> Black allows White a big center (e4+d4), then attacks it with ...e5 (and eventually ...f5) on the kingside. One of the most dynamic defenses.</p>
+      <p><strong>Main Line:</strong> Classical: <code>4.e4 d6 5.Nf3 O-O 6.Be2 e5 7.O-O Nc6 8.d5 Ne7</code> — the great KID tabiya. Sämisch: 5.f3, Averbakh: 5.Be2 + Bg5.</p>
+      <p><strong>Plans:</strong> Black: ...f5 kingside attack, ...Nh5-f4, ...g5-g4 pawn storm. White: c5 queenside expansion, a4-a5, b4 break. The two sides race.</p>
+      <p><strong>Pawn Structures:</strong> Benoni-like after d5: locked center, opposite-side play. The f5 vs c5 race defines the KID.</p>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">Nimzo-Indian (1.d4 Nf6 2.c4 e6 3.Nc3 Bb4) <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p><strong>Core Ideas:</strong> Black pins the knight and fights for e4 control. Extremely flexible — can lead to positional or tactical play. One of the most respected defenses at all levels.</p>
+      <p><strong>Main Line:</strong> <code>4.Qc2</code> (Classical), <code>4.e3</code> (Rubinstein), <code>4.f3</code> (aggressive), <code>4.a3</code> (Sämisch — take the bishop pair)</p>
+      <p><strong>Plans:</strong> Black: Control e4, double White's pawns (Bxc3), play against structural weaknesses. White: Bishop pair advantage, central expansion with e4.</p>
+      <p><strong>Pawn Structures:</strong> Doubled c-pawns after Bxc3 bxc3 are central to Nimzo strategy. IQP positions in Rubinstein.</p>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">Grünfeld Defense (1.d4 Nf6 2.c4 g6 3.Nc3 d5) <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p><strong>Core Ideas:</strong> Hypermodern: Black gives up the center (allows cxd5) then attacks it with ...c5, ...Bg7 pressure on d4. Extremely theoretical and dynamic.</p>
+      <p><strong>Main Line:</strong> <code>4.cxd5 Nxd5 5.e4 Nxc3 6.bxc3 Bg7 7.Nf3 c5</code> — Russian System. Exchange: 7.Bc4 is very dangerous.</p>
+      <p><strong>Plans:</strong> Black: Pressure d4 with Bg7, ...c5, ...Nc6, ...Bg4. White: Maintain the big center, attack with space. If White holds the center, White is better.</p>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">London System (1.d4 + 2.Bf4) <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p><strong>Core Ideas:</strong> Universal system for White: Bf4, e3, Nf3, Be2/Bd3, O-O. Solid, low-theory, difficult to crack. Excellent for building understanding before deep theory.</p>
+      <p><strong>Main Line:</strong> <code>1.d4 d5 2.Bf4 Nf6 3.e3 c5 4.c3 Nc6 5.Nd2</code> — standard London setup</p>
+      <p><strong>Plans:</strong> White: Solid center, develop everything, push e4 when ready or play on the queenside with c4. Black: ...c5 break, develop actively, don't let White get a comfortable squeeze.</p>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">Catalan (1.d4 Nf6 2.c4 e6 3.g3) <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p><strong>Core Ideas:</strong> White fianchettoes the bishop to g2, creating enormous long-diagonal pressure. Combines Queen's Gambit ideas with a fianchetto. Extremely strong at top level.</p>
+      <p><strong>Main Line:</strong> <code>3...d5 4.Bg2 Be7 5.Nf3 O-O 6.O-O dxc4</code> (Open Catalan) or <code>6...Nbd7</code> (Closed Catalan)</p>
+      <p><strong>Plans:</strong> White: Bg2 pressure, a4/Qa4 to recover c4 pawn, long-term positional squeeze. Black: Hold the c4 pawn or use it as a lever for counterplay.</p>
+    </div>
+  </div>
+
+  <h3>Flank Openings</h3>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">English Opening (1.c4) <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p>Flexible flank opening. Can transpose to d4 systems or go into Reversed Sicilian, symmetrical English, or independent lines. Key ideas: control d5, fianchetto on g2, slow strategic play.</p>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">Réti Opening (1.Nf3) <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p>Hypermodern: control center from the flanks. Usually followed by g3, Bg2, O-O, c4 or d3. Extremely flexible — can transpose to almost anything.</p>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">Bird's Opening (1.f4) <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p>Controls e5, aims for Stonewall setup (f4+e3+d4). Leningrad Bird with g3 is more dynamic. Weakness: e1-h4 diagonal exposed. From's Gambit (1...e5) is the key challenge.</p>
+    </div>
+  </div>
+
+  <div class="collapse open">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">🎯 Recommended Starter Repertoire (Months 1–6) <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Color</th><th>vs Response</th><th>Your Weapon</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td>White</td><td>All responses</td><td>London System (2.Bf4)</td><td>Low theory, build positional understanding, works against everything</td></tr>
+            <tr><td>Black vs 1.e4</td><td>Main weapon</td><td>Caro-Kann (1...c6)</td><td>Solid, teaches good pawn play, avoids sharp theory</td></tr>
+            <tr><td>Black vs 1.d4</td><td>Main weapon</td><td>King's Indian Defense</td><td>Teaches attacking play, pattern-rich, exciting</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-top:8px"><strong>By Month 12</strong>, expand White to 1.e4 (learning Ruy Lopez / Italian) and add the Sicilian Najdorf as a second Black weapon vs 1.e4.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SECTION: ATTACKS ==================== -->
+<div class="section" id="section-attacks">
+  <h2>⚔️ Major Attacking Systems</h2>
+  <p>Learn these in order. Master each before moving to the next. Each system becomes a weapon in your arsenal.</p>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">Greek Gift Sacrifice (Bxh7+) <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p><span class="tag tag-green">WHEN IT WORKS</span> Bishop on d3 (or b1-h7 diagonal), knight on f3 ready to go to g5, queen can reach h5 or the h-file. Black has castled kingside with weakened or absent f6 knight defense.</p>
+      <p><span class="tag tag-blue">PIECE PLACEMENT</span> Bd3 aimed at h7, Nf3→Ng5, Queen to h5. Sometimes Re1 for open e-file support. Pawn on e5 helps by denying Nf6.</p>
+      <p><span class="tag tag-yellow">WARNING SIGNS</span> If Black has ...g6 played, sacrifice likely fails. Nf6 strongly defends. ...Kg8 retreats can hold if queen can't reach h-file quickly. Always calculate ...Kxh7, Ng5+ Kg8 (or Kg6) and check you have a forced continuation.</p>
+      <p><span class="tag tag-red">DEFENSIVE RESOURCES</span> Don't accept if your king can run to g8 safely. ...Bf5 blocks. ...Nf6 prevents. After Kg6, Black often survives if White's attack runs out of steam.</p>
+      <p><span class="tag tag-gold">STUDY GAME</span> Lasker vs Bauer 1889 — the original double bishop sacrifice. Alekhine's games feature many Greek Gifts.</p>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">Kingside Attack (O-O + Pawn Storm / Piece Attack) <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p><span class="tag tag-green">WHEN IT WORKS</span> You have more pieces aimed at the kingside than opponent has defending. Opponent's king has weaknesses (moved pawns, missing defender). You have a space advantage on the kingside.</p>
+      <p><span class="tag tag-blue">PIECE PLACEMENT</span> Rooks on e1/f1 or doubled on the f/g/h files. Knights on f5/g5/e5. Queen ready to swing to h5/g4. Bishops on diagonals pointing at king.</p>
+      <p><span class="tag tag-yellow">WARNING SIGNS</span> An attack with no center control usually fails. Make sure center is closed or you control it before launching a wing attack. Steinitz's principle: the right to attack belongs to the side with the positional advantage.</p>
+      <p><span class="tag tag-red">DEFENSIVE RESOURCES</span> Counter in the center (Steinitz). Trade attacking pieces. Create counterplay on the opposite wing. Don't panic — calm defense often refutes premature attacks.</p>
+      <p><span class="tag tag-gold">STUDY GAME</span> Kasparov vs Topalov 1999 — the 'Immortal Game' of modern chess. Tal's entire career.</p>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">Opposite-Side Castling Attack <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p><span class="tag tag-green">WHEN IT WORKS</span> Both sides castle on different sides. This is a RACE — whoever breaks through first wins. Common in Sicilian Dragon, King's Indian, many d4 openings.</p>
+      <p><span class="tag tag-blue">PIECE PLACEMENT</span> Pawn storm: g4-g5 (or h4-h5) to rip open files near enemy king. Pieces behind pawns for support. Rooks on g1/h1 files.</p>
+      <p><span class="tag tag-yellow">WARNING SIGNS</span> Speed is everything. Don't waste moves on non-attacking ideas. Every tempo matters. Know your pawn break sequences — h4-h5 vs g4-g5 depends on structure.</p>
+      <p><span class="tag tag-gold">STUDY GAME</span> Any Sicilian Dragon Yugoslav Attack game. Fischer vs Larsen 1971.</p>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">Minority Attack <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p><span class="tag tag-green">WHEN IT WORKS</span> You have fewer pawns on the queenside (e.g., a+b vs a+b+c). Push your minority to create weaknesses in opponent's majority. Classic in QGD Carlsbad structure.</p>
+      <p><span class="tag tag-blue">PIECE PLACEMENT</span> Pawns: a4-b5, exchange on c6 to create an isolated c-pawn or backward pawn. Pieces: Rooks on a and b files, bishop or knight targeting the weakness.</p>
+      <p><span class="tag tag-gold">STUDY GAME</span> Karpov's QGD games, especially Karpov vs Unzicker 1974.</p>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">Central Breakthrough (e4-e5 or d4-d5 break) <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p><span class="tag tag-green">WHEN IT WORKS</span> You have a central pawn majority or the opponent's center is vulnerable. The break opens lines for your pieces and disrupts opponent's coordination.</p>
+      <p><span class="tag tag-blue">PIECE PLACEMENT</span> Support the break with pieces. Have rooks ready for opened files. Knights and bishops targeting squares the break creates.</p>
+      <p><span class="tag tag-gold">STUDY GAME</span> Kasparov's e4-e5 breaks in the King's Indian as White. Botvinnik's central strategy.</p>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">Exchange Sacrifice (Rook for Minor Piece) <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p><span class="tag tag-green">WHEN IT WORKS</span> You gain: a powerful minor piece (especially a knight on an outpost or a dominant bishop), pawn structure damage, lasting initiative, or a crushing attack. The material deficit (~2 points) is offset by positional factors.</p>
+      <p><span class="tag tag-blue">PIECE PLACEMENT</span> Sacrifice on c3 (destroying pawn structure), c6 (undermining), or f6 (attacking dark squares). The remaining minor piece should dominate.</p>
+      <p><span class="tag tag-gold">STUDY GAME</span> Petrosian was the all-time master of exchange sacrifices. Petrosian vs Reshevsky 1953.</p>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">Battery Attacks (Queen + Bishop / Doubled Rooks) <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p><span class="tag tag-green">WHEN IT WORKS</span> Open diagonal or file where you can stack pieces. Queen behind bishop on a diagonal (x-ray attack). Doubled rooks on an open file, especially the 7th rank.</p>
+      <p><span class="tag tag-blue">PIECE PLACEMENT</span> Identify the target (usually the king or a weak pawn), align pieces on the line of attack. Rook + Rook on 7th rank (the 'pig' formation) is devastating.</p>
+      <p><span class="tag tag-gold">STUDY GAME</span> Alekhine's battery attacks. Any Sicilian where White doubles rooks on the d-file.</p>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">Pawn Storm <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p><span class="tag tag-green">WHEN IT WORKS</span> Your king is safe (often castled opposite side or the center is locked). You have a clear target area. Pawns advance to open lines for your pieces.</p>
+      <p><span class="tag tag-yellow">WARNING SIGNS</span> Once pawns advance, they can't come back. If the storm fails, you have permanent weaknesses. Calculate that you'll break through before your opponent's counterattack lands.</p>
+      <p><span class="tag tag-gold">STUDY GAME</span> The Yugoslav Attack in the Sicilian Dragon. Fischer's kingside storms.</p>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">Positional Squeeze <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p><span class="tag tag-green">WHEN IT WORKS</span> You have more space and better pieces. Opponent is cramped with no active plan. Restrict opponent's pieces further, grab more space, then convert when they run out of useful moves.</p>
+      <p><span class="tag tag-yellow">WARNING SIGNS</span> Don't rush. Premature attacking can release the tension and let the opponent equalize. Patience is the weapon.</p>
+      <p><span class="tag tag-gold">STUDY GAME</span> Karpov's entire style. Karpov vs Kasparov WCh 1984. Carlsen's technical squeeze games.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SECTION: DEFENSE ==================== -->
+<div class="section" id="section-defense">
+  <h2>🛡️ Defensive Techniques</h2>
+  <p>Defense wins games. At every level, the player who makes fewer mistakes wins. These techniques will save you hundreds of points.</p>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Prophylaxis (Preventing Opponent's Plans) <span class="collapse-arrow">▸</span></button><div class="collapse-body"><p>Before making your own plan, ask: "What does my opponent WANT to do?" Then prevent it. This is the single most important defensive concept. Petrosian and Karpov built careers on this. At your level, even asking this question once per move will gain 100+ rating points.</p><p><span class="tag tag-gold">STUDY</span> Petrosian vs Spassky — entire WCh 1966. Karpov's prophylactic moves (h3 to prevent Bg4, a3 to prevent Nb4).</p></div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Fortress Building <span class="collapse-arrow">▸</span></button><div class="collapse-body"><p>When materially down, set up an impregnable structure that the opponent cannot penetrate. Common fortresses: Bishop + pawns vs Rook in certain configurations. Knight behind a pawn chain. Blocked position with wrong-colored bishop for the opponent.</p><p><span class="tag tag-gold">STUDY</span> Carlsen vs Caruana WCh 2018 — multiple fortress defenses. The famous rook vs bishop fortress.</p></div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Counterattack Defense <span class="collapse-arrow">▸</span></button><div class="collapse-body"><p>The best defense is often a counterattack. Instead of passively defending, strike at your opponent's weakness. If they attack your kingside, hit the center or queenside. This forces them to deal with your threats instead of executing their plan.</p><p><span class="tag tag-gold">STUDY</span> Lasker's defensive counterattacks. Marshall Attack in the Ruy Lopez — Black sacrifices a pawn for a fierce attack.</p></div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Active vs Passive Defense <span class="collapse-arrow">▸</span></button><div class="collapse-body"><p>Active defense: counterattack, create threats, seek exchanges of attacking pieces. Passive defense: hunker down, block everything, wait for opponent to overextend. RULE: Active defense almost always beats passive defense at GM level. At club level, passive defense works more often because opponents make mistakes, but train active defense to grow.</p><p><span class="tag tag-gold">STUDY</span> Lasker was the master of active defense. Compare his style to Steinitz's sometimes passive approach.</p></div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">King Safety Under Attack <span class="collapse-arrow">▸</span></button><div class="collapse-body"><p>If your king is under attack: 1) Can you trade queens? (usually kills the attack), 2) Can you block the critical file/diagonal?, 3) Can you flee to safety?, 4) Can you create a counter-threat that forces the opponent to deal with you? Priority order: counter-threat &gt; trade queens &gt; block &gt; flee &gt; passive defense.</p><p><span class="tag tag-gold">STUDY</span> Fischer's defensive technique — he would trade queens at the right moment to neutralize attacks, then grind the endgame.</p></div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Defending Worse Endgames <span class="collapse-arrow">▸</span></button><div class="collapse-body"><p>Principles: Activate your king immediately. Place rooks behind passed pawns (yours or opponent's). Cut off the opponent's king from the action. Create counterplay on the opposite side. In rook endgames, activity trumps material. Never give up — endgame fortresses and stalemate tricks are real.</p><p><span class="tag tag-gold">STUDY</span> Carlsen's incredible endgame defense. The Swindle — creating practical chances in lost positions.</p></div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Neutralizing Gambits <span class="collapse-arrow">▸</span></button><div class="collapse-body"><p>Against gambits: 1) Accept the pawn if you can hold it safely, 2) Develop quickly, 3) Return material at the right moment to neutralize the initiative, 4) Trade pieces to reach an endgame where extra material matters. Don't try to hold every pawn — sometimes giving one back kills the attack completely.</p></div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Time Pressure Survival <span class="collapse-arrow">▸</span></button><div class="collapse-body"><p>When low on time: 1) Play simple, solid moves — not the best move, the safest move, 2) Avoid complications, 3) Trade pieces to simplify, 4) Keep your clock in mind — spend time only on critical decisions, 5) Pre-move obvious recaptures in online play, 6) Trust your instincts from pattern training.</p><p><span class="tag tag-gold">STUDY</span> Fischer's legendary time pressure performance. Nakamura's bullet chess instincts.</p></div></div>
+</div>
+
+<!-- ==================== SECTION: PATTERNS ==================== -->
+<div class="section" id="section-patterns">
+  <h2>🎯 Pattern Recognition Training System</h2>
+
+  <div class="collapse open">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">Tactical Motifs — Drill Order (Foundation → Advanced) <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <div class="table-wrap"><table><thead><tr><th>Priority</th><th>Motif</th><th>Description</th><th>Daily Target</th></tr></thead><tbody>
+        <tr><td>1 (Month 1)</td><td>Forks</td><td>One piece attacks two+ targets. Knight forks are most common.</td><td>20 puzzles/day</td></tr>
+        <tr><td>2 (Month 1)</td><td>Pins</td><td>A piece can't move because it exposes a more valuable piece behind it.</td><td>20 puzzles/day</td></tr>
+        <tr><td>3 (Month 2)</td><td>Skewers</td><td>Reverse pin — attack a valuable piece; when it moves, capture what's behind.</td><td>15 puzzles/day</td></tr>
+        <tr><td>4 (Month 2)</td><td>Discovered Attacks</td><td>Moving one piece reveals an attack from another. Discovered checks are devastating.</td><td>15 puzzles/day</td></tr>
+        <tr><td>5 (Month 3)</td><td>Deflection</td><td>Force a defensive piece away from its duty. Related: overloading.</td><td>15 puzzles/day</td></tr>
+        <tr><td>6 (Month 3)</td><td>Decoy</td><td>Lure a piece to a bad square where it can be exploited.</td><td>10 puzzles/day</td></tr>
+        <tr><td>7 (Month 4)</td><td>Removing the Guard</td><td>Capture or chase away the piece defending the target.</td><td>15 puzzles/day</td></tr>
+        <tr><td>8 (Month 4+)</td><td>Mating Nets</td><td>Back rank mates, smothered mates, Anastasia's mate, Arabian mate, Boden's mate.</td><td>10 puzzles/day</td></tr>
+        <tr><td>9 (Month 5+)</td><td>Interference</td><td>Place a piece between two enemy pieces to disrupt their coordination.</td><td>5 puzzles/day</td></tr>
+        <tr><td>10 (Month 6+)</td><td>Zwischenzug</td><td>In-between move before the expected recapture.</td><td>Game analysis</td></tr>
+      </tbody></table></div>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">Positional Motifs — Recognition Targets <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <div class="table-wrap"><table><thead><tr><th>Motif</th><th>What to Spot</th><th>Why It Matters</th></tr></thead><tbody>
+        <tr><td>Outposts</td><td>A square in enemy territory protected by your pawn, where opponent can't chase your piece with a pawn</td><td>A knight on an outpost (e.g., Nd5) can be worth a rook positionally</td></tr>
+        <tr><td>Weak Squares</td><td>Squares that can't be defended by pawns</td><td>Weak squares become targets for piece invasion</td></tr>
+        <tr><td>Open Files</td><td>Files with no pawns — especially targeting weak pawns or 7th/8th rank</td><td>Rooks dominate on open files. First to control = lasting edge</td></tr>
+        <tr><td>Bad Bishops</td><td>A bishop blocked by its own pawns (same color)</td><td>Trade YOUR bad bishop or lock in opponent's</td></tr>
+        <tr><td>Space Advantage</td><td>Controlling more territory with advanced pawns</td><td>More space = more mobility = more options</td></tr>
+        <tr><td>Backward Pawns</td><td>A pawn that can't be supported by another pawn and can't safely advance</td><td>A backward pawn on an open file is a chronic weakness</td></tr>
+      </tbody></table></div>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">Endgame Motifs — Essential Patterns <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <div class="table-wrap"><table><thead><tr><th>Motif</th><th>What It Is</th><th>When to Use</th></tr></thead><tbody>
+        <tr><td>Opposition</td><td>Kings face off with odd number of squares between — player NOT to move has the advantage</td><td>Every K+P endgame. Decides promotion.</td></tr>
+        <tr><td>Triangulation</td><td>King takes 3 moves to reach a square reachable in 1, to lose a tempo</td><td>Advanced K+P endings. Forces zugzwang.</td></tr>
+        <tr><td>Lucena Position</td><td>R+P vs R, pawn on 7th, king in front. "Building a bridge" wins.</td><td>THE most important rook endgame. Reach it = win.</td></tr>
+        <tr><td>Philidor Position</td><td>R+P vs R defensive setup. Rook on 6th rank, then 1st rank for checks.</td><td>THE most important defensive rook endgame. Reach it = draw.</td></tr>
+        <tr><td>Pawn Breakthrough</td><td>Sacrificing pawns to create a passed pawn that promotes</td><td>K+P endings with multiple pawns.</td></tr>
+        <tr><td>Zugzwang</td><td>Position where any move worsens your position</td><td>Common in endings. Put opponent in zugzwang.</td></tr>
+        <tr><td>Stalemate Tricks</td><td>When losing, seek positions with no legal moves — it's a draw</td><td>Crucial survival. Many "lost" endgames are saved this way.</td></tr>
+      </tbody></table></div>
+    </div>
+  </div>
+
+  <div class="collapse">
+    <button class="collapse-trigger" onclick="toggleCollapse(this)">Daily Pattern Drill Protocol <span class="collapse-arrow">▸</span></button>
+    <div class="collapse-body">
+      <p><strong>The 30/30/30 Rule:</strong> Every day, spend 30 minutes on tactical puzzles, 30 minutes on positional exercises, and 30 minutes on endgame drills. Consistency matters more than volume.</p>
+      <p><strong>Puzzle Solving Rules:</strong></p>
+      <p>1. Never guess. Calculate the full solution before playing the move.</p>
+      <p>2. If you can't solve it in 5 minutes, look at the solution. But then re-solve it 3 days later from scratch.</p>
+      <p>3. Track your success rate. Target: 75%+ accuracy at your puzzle rating level.</p>
+      <p>4. When you get a puzzle wrong, categorize WHY: missed the motif? Miscalculated? Didn't see the defense?</p>
+      <p><strong>Spaced Repetition:</strong> Re-solve failed puzzles at intervals: Day 1 → Day 3 → Day 7 → Day 14 → Day 30. After 5 correct solves, the pattern is internalized.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SECTION: MEMORY ==================== -->
+<div class="section" id="section-memory">
+  <h2>🧠 Memory System for Chess Mastery</h2>
+
+  <div class="collapse open"><button class="collapse-trigger" onclick="toggleCollapse(this)">Spaced Repetition System (SRS) <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <p>This is the single most powerful tool for chess memorization. Use <strong>Anki</strong> or <strong>Chessable</strong>.</p>
+    <p><strong>How it works:</strong> You review material at increasing intervals — new cards daily, then 1 day, 3 days, 7 days, 14 days, 30 days, 90 days. Each successful recall extends the interval. Each failure resets it.</p>
+    <p><strong>What to put in SRS:</strong> Opening lines (Front = position. Back = next move and why). Tactical patterns (Front = position. Back = winning combination). Endgame positions. Strategic rules.</p>
+    <p><strong>Daily SRS time:</strong> 15–20 minutes. Non-negotiable. This compounds exponentially over months.</p>
+  </div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Chunking Method <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <p>GMs don't memorize individual pieces — they see "chunks" of 4–6 pieces that form recognizable patterns.</p>
+    <p><strong>Tactical chunks:</strong> "Knight on f3 + Bishop on c4 + Queen on d1 = Italian setup." "Rook on e1 + Queen on d3 + Bishop pointing at h7 = Greek Gift potential."</p>
+    <p><strong>Drill:</strong> Look at GM game positions for 10 seconds, look away, reconstruct on a board. Start with 6 pieces, work up to full positions.</p>
+  </div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Visualization Training <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <p><strong>Level 1 (Months 1–3):</strong> Close your eyes and visualize the starting position. Name all pieces on the 2nd rank. Which color is h4? Do 5 minutes daily.</p>
+    <p><strong>Level 2 (Months 4–6):</strong> Play through a 10-move game blindfolded (partner reads moves). Reconstruct the final position to check.</p>
+    <p><strong>Level 3 (Months 7–12):</strong> Solve simple tactics (mate-in-2) without a board. Just hear/read the position and find the answer mentally.</p>
+    <p><strong>Level 4 (Year 2):</strong> Play blindfold games at slow time controls. Even one per week dramatically improves visualization.</p>
+  </div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Game Memorization Method <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <p><strong>The Narrative Method:</strong> Don't memorize moves as notation — create a story. Example for Morphy's Opera Game: "Morphy develops every piece rapidly (chapter 1). The opponents waste time (chapter 2). Morphy sacrifices to rip open lines (chapter 3). The rook delivers checkmate (chapter 4)."</p>
+    <p><strong>Steps:</strong> 1) Play through once for the story. 2) Identify 4–5 critical moments. 3) Memorize those as "anchors." 4) Fill in moves between anchors. 5) Reconstruct from memory. 6) Review via SRS.</p>
+    <p><strong>Target:</strong> 2 games/month. Year 1: 24 games. Year 2: 50+ games.</p>
+  </div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Recall Testing Protocol <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <p><strong>Weekly:</strong> Pick a random opening from your repertoire. Write the first 10 moves from memory. Check. Score: 100% = next interval. Less = review in 3 days.</p>
+    <p><strong>Monthly:</strong> Set up 10 positions from studied master games. Name the game, the key plan, the next 3 moves. Target: 70%+ accuracy.</p>
+  </div></div>
+</div>
+
+<!-- ==================== SECTION: MASTERS ==================== -->
+<div class="section" id="section-masters">
+  <h2>👑 Master Game Study Program</h2>
+  <p><strong>Study order:</strong> Start with Morphy (simple lessons), then Capablanca (endgames), then Fischer (precision), then Tal (tactics), then Kasparov (dynamics). Add others as you progress.</p>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Paul Morphy (1837–1884) <span class="collapse-arrow">▸</span></button><div class="collapse-body"><span class="tag tag-gold">RAPID DEVELOPMENT &amp; OPEN LINES</span><p style="margin-top:10px">Morphy teaches you that development wins games. Study him to learn how devastating it is when one side develops all their pieces while the other wastes time. Every beginner should start here.</p><p><strong>Must-Study Games:</strong> Opera Game (1858), Morphy vs Duke of Brunswick, Morphy vs Paulsen (queen sacrifice)</p></div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Wilhelm Steinitz (1836–1900) <span class="collapse-arrow">▸</span></button><div class="collapse-body"><span class="tag tag-gold">POSITIONAL FOUNDATIONS</span><p style="margin-top:10px">The first World Champion. Invented positional chess. Learn: accumulate small advantages, don't attack without justification, weak squares matter, pawn structure is permanent.</p><p><strong>Must-Study:</strong> Steinitz vs Von Bardeleben 1895</p></div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">José Capablanca (1888–1942) <span class="collapse-arrow">▸</span></button><div class="collapse-body"><span class="tag tag-gold">SIMPLICITY &amp; ENDGAME TECHNIQUE</span><p style="margin-top:10px">Perhaps the greatest natural talent ever. His games look effortless — simple development, exchanges at the right moment, flawless endgame technique.</p><p><strong>Must-Study:</strong> Capablanca vs Marshall 1918, Capablanca vs Tartakower 1924</p></div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Alexander Alekhine (1892–1946) <span class="collapse-arrow">▸</span></button><div class="collapse-body"><span class="tag tag-gold">DYNAMIC ATTACKING PLAY</span><p style="margin-top:10px">Combined deep strategy with ferocious tactics. His combinations arose from positional pressure. Study him to learn how strategy creates tactics.</p><p><strong>Must-Study:</strong> Alekhine vs Réti 1925, Alekhine vs Bogoljubov 1922</p></div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Mikhail Botvinnik (1911–1995) <span class="collapse-arrow">▸</span></button><div class="collapse-body"><span class="tag tag-gold">SCIENTIFIC PREPARATION</span><p style="margin-top:10px">The father of the Soviet chess school. Invented systematic opening preparation and training as an athlete. Study his method as much as his games.</p><p><strong>Must-Study:</strong> Botvinnik vs Capablanca 1938</p></div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Mikhail Tal (1936–1992) <span class="collapse-arrow">▸</span></button><div class="collapse-body"><span class="tag tag-gold">SACRIFICE &amp; INITIATIVE</span><p style="margin-top:10px">The 'Magician from Riga.' His sacrifices often couldn't be calculated to the end — he played on intuition and complications. Study the value of initiative and attacking psychology.</p><p><strong>Must-Study:</strong> Tal vs Larsen 1965 (17.Nd5!!), Tal's best games collection</p></div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Bobby Fischer (1943–2008) <span class="collapse-arrow">▸</span></button><div class="collapse-body"><span class="tag tag-gold">PRECISION &amp; CONCRETE PLAY</span><p style="margin-top:10px">Arguably the greatest player ever. Every move has a purpose, nothing is wasted. Study him to learn clear, logical thinking.</p><p><strong>Must-Study:</strong> Game of the Century (vs Byrne), Fischer vs Spassky 1972 Game 6, My 60 Memorable Games (essential book)</p></div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Anatoly Karpov (b. 1951) <span class="collapse-arrow">▸</span></button><div class="collapse-body"><span class="tag tag-gold">PROPHYLAXIS &amp; POSITIONAL SQUEEZE</span><p style="margin-top:10px">The master of "boa constrictor" chess. Slowly improves his position while restricting yours until you can't breathe.</p><p><strong>Must-Study:</strong> Karpov vs Unzicker 1974, Karpov vs Spassky 1974</p></div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Garry Kasparov (b. 1963) <span class="collapse-arrow">▸</span></button><div class="collapse-body"><span class="tag tag-gold">DYNAMIC PLAY &amp; PREPARATION</span><p style="margin-top:10px">Combined Tal's fire with Karpov's technique. His opening preparation was legendary.</p><p><strong>Must-Study:</strong> Kasparov vs Topalov 1999, Kasparov vs Karpov WCh matches</p></div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Viswanathan Anand (b. 1969) <span class="collapse-arrow">▸</span></button><div class="collapse-body"><span class="tag tag-gold">SPEED &amp; INTUITION</span><p style="margin-top:10px">One of the fastest-thinking champions. Study him to learn rapid pattern recognition.</p><p><strong>Must-Study:</strong> Anand vs Aronian 2013, Anand vs Topalov WCh 2010</p></div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Magnus Carlsen (b. 1990) <span class="collapse-arrow">▸</span></button><div class="collapse-body"><span class="tag tag-gold">UNIVERSAL PLAY &amp; ENDGAME GRINDING</span><p style="margin-top:10px">The highest-rated player ever. Can play any style. His endgame technique is machine-like. Study how to grind wins from equal-looking positions.</p><p><strong>Must-Study:</strong> Carlsen vs Anand WCh 2013 Game 6, Carlsen's rook endgame wins</p></div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">How to Study a Master Game <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <p>1) Play through once without notes. 2) Cover moves and guess each one — score yourself. 3) Read annotated versions. 4) Identify 3–5 critical moments. 5) For each: what was the key idea? What would you have played? Why is the master's move better? 6) Add key positions to SRS. 7) One week later, reconstruct from memory.</p>
+  </div></div>
+</div>
+
+<!-- ==================== SECTION: MIDDLEGAME ==================== -->
+<div class="section" id="section-middlegame">
+  <h2>♜ Middlegame Decision-Making Framework</h2>
+
+  <div class="collapse open"><button class="collapse-trigger" onclick="toggleCollapse(this)">The KSMPPT Evaluation Checklist <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <p>Before EVERY move in a serious game, run through this checklist (30–60 seconds once automated):</p>
+    <div class="table-wrap"><table><thead><tr><th>Letter</th><th>Factor</th><th>Questions to Ask</th></tr></thead><tbody>
+      <tr><td><strong>K</strong></td><td>King Safety</td><td>Is my king safe? Is opponent's king safe? Can I create threats against their king?</td></tr>
+      <tr><td><strong>S</strong></td><td>Structure</td><td>Who has better pawn structure? Weak pawns to target? Available pawn breaks?</td></tr>
+      <tr><td><strong>M</strong></td><td>Material</td><td>Who is ahead? Is a sacrifice possible? Can I win material tactically?</td></tr>
+      <tr><td><strong>P</strong></td><td>Piece Activity</td><td>Which is my worst piece? How to improve it? Are opponent's pieces passive?</td></tr>
+      <tr><td><strong>P</strong></td><td>Plans</td><td>What is MY plan for 3–5 moves? What is OPPONENT'S plan? Which is more dangerous?</td></tr>
+      <tr><td><strong>T</strong></td><td>Tactics &amp; Time</td><td>Any forced sequences? How much time do I have? Simplify or complicate?</td></tr>
+    </tbody></table></div>
+  </div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Candidate Moves Method (Kotov's System) <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <p><strong>Step 1:</strong> Identify ALL candidate moves (usually 3–5). Don't calculate the first move you see.</p>
+    <p><strong>Step 2:</strong> For each candidate, calculate the main variation (checks, captures, threats first).</p>
+    <p><strong>Step 3:</strong> Evaluate the resulting position using KSMPPT.</p>
+    <p><strong>Step 4:</strong> Choose the move leading to the best position.</p>
+    <p><strong>Critical Rule:</strong> Once you start calculating a different candidate, do NOT go back and re-calculate the previous one. Calculate each line once, thoroughly, then decide.</p>
+    <p><strong>Forcing Moves Priority:</strong> Always check: Checks → Captures → Threats. If a forcing sequence wins, skip quiet alternatives.</p>
+  </div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Decision-Making in Unclear Positions <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <p>When you don't know what to do:</p>
+    <p><strong>1. Improve Your Worst Piece.</strong> Find the piece doing the least and give it a better job. Almost never wrong.</p>
+    <p><strong>2. Restrict Your Opponent's Best Piece.</strong> Trade it or block it.</p>
+    <p><strong>3. Create a Small Threat.</strong> Even minor threats force reactions, giving you initiative.</p>
+    <p><strong>4. Waiting Move.</strong> Improve slightly, wait for opponent to commit. Psychologically hard but often correct.</p>
+    <p><strong>5. When in Doubt, Centralize.</strong> Central pieces are more flexible.</p>
+  </div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Time Management in Games <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <div class="table-wrap"><table><thead><tr><th>Phase</th><th>% of Time</th><th>How to Spend It</th></tr></thead><tbody>
+      <tr><td>Opening (moves 1–12)</td><td>10–15%</td><td>Play prepared lines efficiently. Don't overthink known theory.</td></tr>
+      <tr><td>Early Middle (13–20)</td><td>25–30%</td><td>Critical decisions — plan formation, piece placement. Invest time here.</td></tr>
+      <tr><td>Late Middle (21–30)</td><td>30–35%</td><td>Tactical opportunities, combinations. Games are decided here.</td></tr>
+      <tr><td>Endgame (30+)</td><td>20–25%</td><td>Technique and precision. Don't rush but be practical.</td></tr>
+    </tbody></table></div>
+  </div></div>
+</div>
+
+<!-- ==================== SECTION: ENDGAME ==================== -->
+<div class="section" id="section-endgame">
+  <h2>♚ Endgame Domination Program</h2>
+
+  <div class="collapse open"><button class="collapse-trigger" onclick="toggleCollapse(this)">King &amp; Pawn Endgames (LEARN FIRST) <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <p>King and pawn endings are the foundation. Every other endgame can simplify into one.</p>
+    <div class="table-wrap"><table><thead><tr><th>Topic</th><th>What to Learn</th><th>Priority</th></tr></thead><tbody>
+      <tr><td>Opposition</td><td>Direct, distant, and diagonal opposition. Key to K+P vs K.</td><td class="priority-critical">🔴 Critical</td></tr>
+      <tr><td>Key Squares</td><td>For each pawn position, 3 key squares. King reaches one = promotion.</td><td class="priority-critical">🔴 Critical</td></tr>
+      <tr><td>Rule of the Square</td><td>Can the opposing king catch a passed pawn? Draw the square to check.</td><td class="priority-critical">🔴 Critical</td></tr>
+      <tr><td>Triangulation</td><td>King maneuver to lose a tempo for zugzwang.</td><td class="priority-important">🟡 Important</td></tr>
+      <tr><td>Pawn Breakthroughs</td><td>Sacrifice one pawn to promote another.</td><td class="priority-important">🟡 Important</td></tr>
+      <tr><td>Outside Passed Pawn</td><td>Lures enemy king away, letting you win on the other side.</td><td class="priority-important">🟡 Important</td></tr>
+      <tr><td>Protected Passed Pawn</td><td>Defended by another pawn — ties down enemy pieces.</td><td class="priority-good">🟢 Good to know</td></tr>
+    </tbody></table></div>
+  </div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Rook Endgames (MOST COMMON) <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <p>Rook endgames occur in ~50% of all decided games. Master these or lose half your potential wins.</p>
+    <div class="table-wrap"><table><thead><tr><th>Position</th><th>Result</th><th>Key Idea</th></tr></thead><tbody>
+      <tr><td>Lucena Position</td><td>Win</td><td>"Building a bridge": rook to 4th rank to shield king from checks.</td></tr>
+      <tr><td>Philidor Position</td><td>Draw</td><td>Rook on 6th rank cutting off king. When pawn advances, go to 1st rank for infinite checks.</td></tr>
+      <tr><td>Rook + 2P vs R + 1P</td><td>Usually win</td><td>Create a passed pawn, use rook actively. Cut off enemy king.</td></tr>
+      <tr><td>Rook on the 7th</td><td>Huge advantage</td><td>Cuts off king and attacks pawns from behind. Two rooks on 7th = usually decisive.</td></tr>
+      <tr><td>Active Rook Principle</td><td>Key concept</td><td>Active rook > passive rook + extra pawn. Activity trumps material.</td></tr>
+      <tr><td>Tarrasch Rule</td><td>Guideline</td><td>Place rooks behind passed pawns (yours AND opponent's).</td></tr>
+    </tbody></table></div>
+  </div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Minor Piece Endgames <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <div class="table-wrap"><table><thead><tr><th>Type</th><th>Key Principles</th></tr></thead><tbody>
+      <tr><td>Bishop vs Knight</td><td>Bishop better in open positions with pawns on both sides. Knight better in closed positions.</td></tr>
+      <tr><td>Opposite-Color Bishops</td><td>Strong drawing tendency — even 2 pawns up can draw. But in middlegames, they FAVOR the attacker.</td></tr>
+      <tr><td>Same-Color Bishops</td><td>Play like normal chess. Extra pawn usually wins with good technique.</td></tr>
+      <tr><td>Bishop Pair</td><td>Worth ~half a pawn more than B+N. Dominate in open positions.</td></tr>
+      <tr><td>Knight Endgames</td><td>Resemble K+P endgames. Zugzwang is common. Centralized knight is powerful.</td></tr>
+    </tbody></table></div>
+  </div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Queen Endgames <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <p>Queen endgames are the hardest. Key principles: 1) Perpetual check draws lurk everywhere. 2) Q+P vs Q is usually drawn unless the pawn is very advanced. 3) Centralize the queen. 4) Queen should be in FRONT of a passed pawn (unlike rook endgames).</p>
+  </div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Practical Conversion Techniques <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <p><strong>When winning:</strong> 1) Trade pieces, not pawns. 2) Create a passed pawn. 3) Centralize your king. 4) Don't rush. 5) Zugzwang is your friend.</p>
+    <p><strong>When defending:</strong> 1) Trade pawns, not pieces. 2) Keep pieces active. 3) Seek counterplay. 4) Fortress positions. 5) Stalemate tricks. 6) Never resign.</p>
+  </div></div>
+</div>
+
+<!-- ==================== SECTION: SCHEDULE ==================== -->
+<div class="section" id="section-schedule">
+  <h2>📋 Daily &amp; Weekly Training Schedule</h2>
+
+  <div class="collapse open"><button class="collapse-trigger" onclick="toggleCollapse(this)">Daily Schedule (4–5 hours, Phases 1–3) <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <div class="table-wrap"><table><thead><tr><th>Time Block</th><th>Activity</th><th>Duration</th><th>Notes</th></tr></thead><tbody>
+      <tr><td>Morning</td><td>Tactical Puzzles (Lichess/Chess.com)</td><td>45 min</td><td>Solve rated puzzles. Track accuracy. Never guess.</td></tr>
+      <tr><td>Morning</td><td>Opening Review (SRS / Chessable)</td><td>20 min</td><td>Drill repertoire lines. Add new lines 2x/week.</td></tr>
+      <tr><td>Morning</td><td>Endgame Study</td><td>25 min</td><td>One endgame topic systematically.</td></tr>
+      <tr><td>Afternoon</td><td>Master Game Study</td><td>40 min</td><td>1 annotated game. Guess moves. Take notes.</td></tr>
+      <tr><td>Afternoon</td><td>Calculation Training</td><td>20 min</td><td>Blindfold exercises or multi-move puzzles.</td></tr>
+      <tr><td>Evening</td><td>Play 1–2 Serious Games (15+10 or 30+0)</td><td>60–90 min</td><td>Apply what you've learned. Quality over quantity.</td></tr>
+      <tr><td>Evening</td><td>Analyze Your Games (without engine first)</td><td>30 min</td><td>Find mistakes yourself. THEN check with engine.</td></tr>
+      <tr><td>Anytime</td><td>Physical Exercise</td><td>30 min</td><td>Running, gym, yoga. Physical fitness = mental stamina.</td></tr>
+    </tbody></table></div>
+  </div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Weekly Structure <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <div class="table-wrap"><table><thead><tr><th>Day</th><th>Main Focus</th><th>Games to Play</th></tr></thead><tbody>
+      <tr><td>Monday</td><td>Tactics Deep Dive (60+ puzzles, themed)</td><td>1 rapid game</td></tr>
+      <tr><td>Tuesday</td><td>Opening Prep (learn 1 new line, drill all known)</td><td>1 rapid game</td></tr>
+      <tr><td>Wednesday</td><td>Endgame Study (textbook chapter)</td><td>1 classical (30+0)</td></tr>
+      <tr><td>Thursday</td><td>Master Game Study (2 annotated games)</td><td>1 rapid game</td></tr>
+      <tr><td>Friday</td><td>Calculation &amp; Visualization training</td><td>2 rapid games</td></tr>
+      <tr><td>Saturday</td><td>Tournament Practice or Long Game (60+0)</td><td>1–2 classical</td></tr>
+      <tr><td>Sunday</td><td>Review Week's Games, Fix Weaknesses, Rest</td><td>Optional blitz (fun)</td></tr>
+    </tbody></table></div>
+  </div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Time Control Balance <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <div class="table-wrap"><table><thead><tr><th>Format</th><th>% of Time</th><th>Purpose</th></tr></thead><tbody>
+      <tr><td>Classical (30+0 or longer)</td><td>40%</td><td>This is where you GROW. Deep thinking, real improvement.</td></tr>
+      <tr><td>Rapid (15+10)</td><td>40%</td><td>Good balance of thinking and pattern practice.</td></tr>
+      <tr><td>Blitz (3+2 or 5+3)</td><td>15%</td><td>Pattern reinforcement ONLY. Do NOT use as main training.</td></tr>
+      <tr><td>Bullet (1+0)</td><td>5% or less</td><td>Pure fun. Zero training value. Limit strictly.</td></tr>
+    </tbody></table></div>
+    <p style="font-weight:700;color:var(--danger)">⚠️ The #1 mistake improving players make is playing too much blitz and not enough classical. Blitz feels productive but doesn't build deep thinking. Treat blitz as dessert, not the main course.</p>
+  </div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Mental &amp; Physical Fitness <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <p><strong>Physical:</strong> Exercise 30–60 min daily. Top GMs are athletes — Carlsen runs, Caruana lifts, Anand swims. Physical stamina directly affects calculation in long games.</p>
+    <p><strong>Mental:</strong> Sleep 7–8 hours. Meditate 10 min daily. One full rest day/week. Stay hydrated during games. Avoid screens 30 min before bed.</p>
+    <p><strong>Burnout prevention:</strong> If exhausted or resentful, take 2–3 days off completely. Consistency over intensity — 4 hours daily for 365 days beats 12 hours for 3 months then quitting.</p>
+  </div></div>
+</div>
+
+<!-- ==================== SECTION: CALCULATION ==================== -->
+<div class="section" id="section-calculation">
+  <h2>🔢 Calculation &amp; Visualization Training</h2>
+
+  <div class="collapse open"><button class="collapse-trigger" onclick="toggleCollapse(this)">Blindfold Exercises (Progressive) <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <div class="table-wrap"><table><thead><tr><th>Level</th><th>Exercise</th><th>Duration</th><th>Frequency</th></tr></thead><tbody>
+      <tr><td>Beginner</td><td>Name the color of any called square instantly ("f3?" → "light")</td><td>5 min</td><td>Daily Month 1</td></tr>
+      <tr><td>Beginner</td><td>Given a piece on a square, name all squares it attacks</td><td>10 min</td><td>Daily Months 1–3</td></tr>
+      <tr><td>Intermediate</td><td>Play through 10 moves reading notation, no board. Describe final position.</td><td>10 min</td><td>3x/week Months 3–6</td></tr>
+      <tr><td>Intermediate</td><td>Solve mate-in-2 from a verbal position description</td><td>10 min</td><td>3x/week Months 4–8</td></tr>
+      <tr><td>Advanced</td><td>Play a full blindfold game at 15+10</td><td>30 min</td><td>1x/week Month 9+</td></tr>
+      <tr><td>Advanced</td><td>Reconstruct a master game from memory</td><td>20 min</td><td>1x/week Month 12+</td></tr>
+    </tbody></table></div>
+  </div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Multi-Move Calculation Trees <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <p><strong>The Tree Method:</strong> Visualize calculation as a tree. Root = current position. Each branch = candidate move. Sub-branches = opponent's responses. Calculate 3 levels deep minimum.</p>
+    <p><strong>Training:</strong> Take a complex position. Write down ALL candidates (3–5). For each, write expected response and your follow-up. Evaluate at the end. Compare with engine. Score: (a) found all candidates? (b) predicted best response? (c) accurate evaluation?</p>
+    <p><strong>Depth targets:</strong> Month 3: 3 half-moves. Month 6: 5. Month 12: 7–8. Month 24: 10+ in forcing lines.</p>
+  </div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Candidate Move Discipline <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <p>The most common mistake is NOT calculating — playing the first reasonable move. Discipline yourself:</p>
+    <p>1. <strong>Stop.</strong> Before touching any piece, scan the board.</p>
+    <p>2. <strong>Checks, Captures, Threats.</strong> List all forcing moves first (both sides).</p>
+    <p>3. <strong>List 3 Candidate Moves.</strong> Force yourself to consider at least 3.</p>
+    <p>4. <strong>Blunder Check.</strong> Before playing: "If I play this, what's opponent's most forcing response?" Eliminates 80% of blunders.</p>
+    <p>5. <strong>Play the move.</strong> Once decided, commit. Don't second-guess.</p>
+  </div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Error-Checking Habits <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <p><strong>Kotov Check:</strong> After calculating your line, spend 30 seconds looking for a flaw. Specifically: missed check? Capture? Zwischenzug?</p>
+    <p><strong>Opponent's Best Move:</strong> Always calculate their BEST response, not the one you hope for.</p>
+    <p><strong>Post-Game Error Categories:</strong> (1) Tactical blindness, (2) Positional misjudgment, (3) Opening error, (4) Time pressure, (5) Psychological. Track your most common type and target it.</p>
+  </div></div>
+</div>
+
+<!-- ==================== SECTION: TOURNAMENT ==================== -->
+<div class="section" id="section-tournament">
+  <h2>🏆 Tournament Performance System</h2>
+
+  <div class="collapse open"><button class="collapse-trigger" onclick="toggleCollapse(this)">Pre-Tournament Preparation <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <p><strong>1 week before:</strong> Review opening repertoire. Focus on lines you'll play, not experiments. Play 3–5 practice games at tournament time control.</p>
+    <p><strong>Night before:</strong> Light review only. 8 hours sleep. Prepare bag: clock, water, snacks, notebook, pen.</p>
+    <p><strong>Morning of:</strong> Light breakfast (complex carbs + protein). 15-min tactical warm-up. Arrive early. Deep breathing.</p>
+  </div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Opponent Preparation <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <p><strong>If known:</strong> Check their games on Lichess/Chess.com. What openings? Aggressive or positional? Good or poor in endgames?</p>
+    <p><strong>Prep strategy:</strong> Identify 1–2 things: what opening will I face, and what's their weakness? Don't over-prepare.</p>
+    <p><strong>Against stronger:</strong> Play solid. Don't try to trick them. Complicate if much stronger — in simple positions their technique wins.</p>
+    <p><strong>Against weaker:</strong> Play YOUR game. Solid, strong play wins naturally.</p>
+  </div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Psychological Resilience <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <p><strong>After a loss:</strong> Walk away. Don't analyze immediately. Eat, drink water. Brief analysis after 30+ min. "Was this a correctable mistake or was opponent just better today?" Both are okay. Move on.</p>
+    <p><strong>After a win:</strong> Don't get overconfident. Analyze anyway — you may have been lucky.</p>
+    <p><strong>Losing streak:</strong> Happens to everyone including world champions. Play simpler, fewer risks. Don't change style dramatically.</p>
+    <p><strong>Tilt signs:</strong> Playing too fast, not calculating, feeling angry. If noticed: stop playing. Take a break. Come back tomorrow.</p>
+  </div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Post-Game Analysis Routine <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <p><strong>Step 1 (immediately):</strong> Write down critical moments you remember.</p>
+    <p><strong>Step 2 (30 min later):</strong> Play through from memory. Note uncertain moments.</p>
+    <p><strong>Step 3 (same day):</strong> Analyze WITHOUT engine. Find mistakes yourself.</p>
+    <p><strong>Step 4 (next day):</strong> Check with engine (Stockfish on Lichess). Compare. Where did your understanding fail?</p>
+    <p><strong>Step 5:</strong> Extract 1–3 lessons. Add to personal "lessons learned" database.</p>
+  </div></div>
+</div>
+
+<!-- ==================== SECTION: RESOURCES ==================== -->
+<div class="section" id="section-resources">
+  <h2>📚 Resources &amp; Tools</h2>
+
+  <div class="collapse open"><button class="collapse-trigger" onclick="toggleCollapse(this)">Essential Books (Priority Order) <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <div class="table-wrap"><table><thead><tr><th>Phase</th><th>Book</th><th>Author</th><th>What It Teaches</th></tr></thead><tbody>
+      <tr><td>Phase 1</td><td>Bobby Fischer Teaches Chess</td><td>Fischer/Margulies</td><td>Pattern recognition for checkmates — best starter book ever</td></tr>
+      <tr><td>Phase 1</td><td>Chess Fundamentals</td><td>Capablanca</td><td>Foundational strategy and endgames</td></tr>
+      <tr><td>Phase 1–2</td><td>Logical Chess: Move by Move</td><td>Chernev</td><td>Every move explained — teaches HOW to think</td></tr>
+      <tr><td>Phase 2</td><td>Winning Chess Tactics</td><td>Seirawan</td><td>Systematic tactical training</td></tr>
+      <tr><td>Phase 2–3</td><td>My System</td><td>Nimzowitsch</td><td>The bible of positional chess</td></tr>
+      <tr><td>Phase 3</td><td>The Art of Attack in Chess</td><td>Vukovic</td><td>Comprehensive attacking manual</td></tr>
+      <tr><td>Phase 3</td><td>My 60 Memorable Games</td><td>Fischer</td><td>Greatest game collection ever written</td></tr>
+      <tr><td>Phase 3–4</td><td>Endgame Strategy</td><td>Shereshevsky</td><td>Practical endgame thinking</td></tr>
+      <tr><td>Phase 4</td><td>Dvoretsky's Endgame Manual</td><td>Dvoretsky</td><td>THE definitive endgame reference</td></tr>
+      <tr><td>Phase 4–5</td><td>Positional Decision Making</td><td>Gelfand</td><td>How a super-GM thinks</td></tr>
+      <tr><td>Phase 5</td><td>GM Preparation: Calculation</td><td>Aagaard</td><td>Master-level calculation training</td></tr>
+    </tbody></table></div>
+  </div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Software &amp; Online Tools <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <div class="table-wrap"><table><thead><tr><th>Tool</th><th>Purpose</th><th>Cost</th></tr></thead><tbody>
+      <tr><td>Lichess.org</td><td>Playing, puzzles, studies, database, analysis. Best free resource.</td><td>Free</td></tr>
+      <tr><td>Chess.com</td><td>Puzzles, lessons, playing. Good puzzle trainer.</td><td>Free/Premium ~$99/yr</td></tr>
+      <tr><td>Chessable</td><td>Opening repertoire with spaced repetition.</td><td>Free/courses $10–50</td></tr>
+      <tr><td>Anki</td><td>Spaced repetition flashcards for positions, patterns.</td><td>Free</td></tr>
+      <tr><td>ChessBase / SCID</td><td>Game database, preparation, analysis.</td><td>Free (SCID) / $200+</td></tr>
+      <tr><td>Stockfish (via Lichess)</td><td>Engine analysis. Free and strongest engine.</td><td>Free</td></tr>
+      <tr><td>Aimchess</td><td>Analyzes your games and identifies weaknesses.</td><td>Free/Premium</td></tr>
+      <tr><td>Lucas Chess</td><td>Training software with graduated difficulty.</td><td>Free</td></tr>
+    </tbody></table></div>
+  </div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Video Courses &amp; Channels <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <div class="table-wrap"><table><thead><tr><th>Resource</th><th>Level</th><th>Focus</th></tr></thead><tbody>
+      <tr><td>Daniel Naroditsky (YouTube)</td><td>All levels</td><td>Speedrun series — watch a GM think. ESSENTIAL viewing.</td></tr>
+      <tr><td>Gotham Chess (YouTube)</td><td>Beginner–Intermediate</td><td>Entertaining and educational opening guides.</td></tr>
+      <tr><td>ChessBase India (YouTube)</td><td>All levels</td><td>Tournament coverage and instructional content.</td></tr>
+      <tr><td>Hanging Pawns (YouTube)</td><td>Intermediate+</td><td>Deep opening and strategy content.</td></tr>
+      <tr><td>Saint Louis Chess Club</td><td>All levels</td><td>Lectures by GMs Finegold, Seirawan, etc.</td></tr>
+    </tbody></table></div>
+  </div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Priority Focus Areas by Phase <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <div class="table-wrap"><table><thead><tr><th>Phase</th><th>Priority 1</th><th>Priority 2</th><th>Priority 3</th></tr></thead><tbody>
+      <tr><td>Phase 1 (Mo 1–3)</td><td>Tactics (60%)</td><td>Basic endgames (25%)</td><td>Opening principles (15%)</td></tr>
+      <tr><td>Phase 2 (Mo 4–6)</td><td>Tactics (40%)</td><td>Openings (30%)</td><td>Endgames (30%)</td></tr>
+      <tr><td>Phase 3 (Mo 7–12)</td><td>Strategy (35%)</td><td>Deep openings (25%)</td><td>Tactics + Endgames (40%)</td></tr>
+      <tr><td>Phase 4 (Mo 13–18)</td><td>Calculation (30%)</td><td>Positional (30%)</td><td>Openings (20%) + Endgames (20%)</td></tr>
+      <tr><td>Phase 5 (Mo 19–24)</td><td>Tournaments (30%)</td><td>Deep analysis (30%)</td><td>Weakness elimination (40%)</td></tr>
+    </tbody></table></div>
+  </div></div>
+
+  <div class="collapse"><button class="collapse-trigger" onclick="toggleCollapse(this)">Quarterly Rating Targets (Realistic) <span class="collapse-arrow">▸</span></button><div class="collapse-body">
+    <div class="table-wrap"><table><thead><tr><th>Quarter</th><th>Rapid Rating</th><th>Puzzle Rating</th><th>Games Analyzed</th></tr></thead><tbody>
+      <tr><td>Q1 (Mo 1–3)</td><td>1300–1400</td><td>1400–1500</td><td>30+</td></tr>
+      <tr><td>Q2 (Mo 4–6)</td><td>1450–1550</td><td>1600–1700</td><td>50+</td></tr>
+      <tr><td>Q3 (Mo 7–9)</td><td>1550–1650</td><td>1700–1800</td><td>80+</td></tr>
+      <tr><td>Q4 (Mo 10–12)</td><td>1650–1800</td><td>1800–1900</td><td>120+</td></tr>
+      <tr><td>Q5 (Mo 13–15)</td><td>1800–1900</td><td>1900–2000</td><td>160+</td></tr>
+      <tr><td>Q6 (Mo 16–18)</td><td>1900–2000</td><td>2000–2100</td><td>200+</td></tr>
+      <tr><td>Q7 (Mo 19–21)</td><td>2000–2100</td><td>2100+</td><td>250+</td></tr>
+      <tr><td>Q8 (Mo 22–24)</td><td>2050–2200</td><td>2200+</td><td>300+</td></tr>
+    </tbody></table></div>
+  </div></div>
+</div>
+
+</div><!-- end .content -->
+
+<!-- ===== FOOTER ===== -->
+<div class="footer">
+  "Discipline beats talent when talent doesn't work." — Tim Notke
+</div>
+
+<script>
+  // === Navigation ===
+  const navBtns = document.querySelectorAll('.nav-btn');
+  const sections = document.querySelectorAll('.section');
+
+  navBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.section;
+      navBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      sections.forEach(s => s.classList.remove('active'));
+      const el = document.getElementById('section-' + target);
+      if (el) {
+        el.classList.add('active');
+        // Reset animation
+        el.style.animation = 'none';
+        el.offsetHeight; // trigger reflow
+        el.style.animation = '';
+      }
+      // Scroll content to top
+      window.scrollTo({ top: document.querySelector('.nav').offsetTop, behavior: 'smooth' });
+    });
+  });
+
+  // === Collapse Panels ===
+  function toggleCollapse(trigger) {
+    const panel = trigger.parentElement;
+    panel.classList.toggle('open');
+  }
+
+  // === Keyboard nav (left/right arrows cycle tabs) ===
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      const btns = Array.from(navBtns);
+      const activeIdx = btns.findIndex(b => b.classList.contains('active'));
+      let next;
+      if (e.key === 'ArrowRight') {
+        next = (activeIdx + 1) % btns.length;
+      } else {
+        next = (activeIdx - 1 + btns.length) % btns.length;
+      }
+      btns[next].click();
+    }
+  });
+
+  // === Theme toggle (persisted) ===
+  const THEME_STORAGE_KEY = 'gmb-theme';
+  const themeToggle = document.getElementById('themeToggle');
+  const themeToggleThumb = document.getElementById('themeToggleThumb');
+
+  function getTheme() {
+    return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+  }
+
+  function setTheme(theme, { persist = true } = {}) {
+    document.documentElement.classList.add('theme-transitioning');
+
+    if (theme === 'light') document.documentElement.dataset.theme = 'light';
+    else delete document.documentElement.dataset.theme;
+
+    if (themeToggleThumb) themeToggleThumb.textContent = theme === 'light' ? '☀' : '☾';
+
+    if (persist) {
+      try {
+        localStorage.setItem(THEME_STORAGE_KEY, theme);
+      } catch (_) {
+        // Ignore persistence failures.
+      }
+    }
+
+    window.setTimeout(() => {
+      document.documentElement.classList.remove('theme-transitioning');
+    }, 450);
+  }
+
+  if (themeToggleThumb) themeToggleThumb.textContent = getTheme() === 'light' ? '☀' : '☾';
+
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+      setTheme(getTheme() === 'light' ? 'dark' : 'light');
+    });
+  }
+</script>
+</body>
+</html>
